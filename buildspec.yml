@@ -1,0 +1,40 @@
+version: 0.2
+
+env:
+  variables:
+    ECR_REPO: fastapi-demo
+    ECR_HOST: localhost:5100
+    CLUSTER_NAME: fastapi-cluster
+    SERVICE_NAME: fastapi-service
+
+phases:
+  install:
+    commands:
+      - echo "Install phase"
+
+  pre_build:
+    commands:
+      - echo "Login to ECR"
+      - aws ecr get-login-password --endpoint-url http://localhost:4566 | docker login --username AWS --password-stdin $ECR_HOST
+
+  build:
+    commands:
+      - echo "Build Docker image"
+      - docker build -t $ECR_REPO .
+      - docker tag $ECR_REPO:latest $ECR_HOST/$ECR_REPO:latest
+
+  post_build:
+    commands:
+      - echo "Push Docker image"
+      - docker push $ECR_HOST/$ECR_REPO:latest
+
+      - echo "Trigger ECS redeploy"
+      - aws ecs update-service \
+          --cluster $CLUSTER_NAME \
+          --service $SERVICE_NAME \
+          --force-new-deployment \
+          --endpoint-url http://localhost:4566
+
+artifacts:
+  files:
+    - '**/*'
