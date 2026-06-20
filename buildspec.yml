@@ -1,0 +1,27 @@
+version: 0.2
+
+env:
+  variables:
+    IMAGE_REPO_NAME: fastapi-cicd-repo
+    IMAGE_TAG: latest
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to ECR..."
+      - aws --endpoint-url=$LOCALSTACK_ENDPOINT ecr describe-repositories || true
+
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -t $IMAGE_REPO_NAME .
+
+      - echo "Tagging image..."
+      - docker tag $IMAGE_REPO_NAME:latest $ECR_HOST/$IMAGE_REPO_NAME:latest
+
+  post_build:
+    commands:
+      - echo "Pushing to ECR..."
+      - docker push $ECR_HOST/$IMAGE_REPO_NAME:latest
+
+      - echo "Done"
