@@ -4,12 +4,15 @@ env:
   variables:
     IMAGE_REPO_NAME: fastapi-cicd-repo
     IMAGE_TAG: latest
+    ECR_HOST: host.docker.internal:5100
+    LOCALSTACK_ENDPOINT: http://host.docker.internal:4566
 
 phases:
   pre_build:
     commands:
-      - echo "Logging in to ECR..."
-      - aws --endpoint-url=$LOCALSTACK_ENDPOINT ecr describe-repositories || true
+      - echo "Starting build..."
+      - pwd
+      - ls -la   # DEBUG (very important)
 
   build:
     commands:
@@ -24,4 +27,9 @@ phases:
       - echo "Pushing to ECR..."
       - docker push $ECR_HOST/$IMAGE_REPO_NAME:latest
 
-      - echo "Done"
+      - echo "Deploying to ECS..."
+      - aws ecs update-service \
+          --cluster fastapi-cicd-cluster \
+          --service fastapi-service \
+          --force-new-deployment \
+          --endpoint-url $LOCALSTACK_ENDPOINT
